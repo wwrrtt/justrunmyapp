@@ -3,7 +3,7 @@ import asyncio
 from playwright.async_api import Playwright, async_playwright
 
 async def run(playwright: Playwright) -> None:
-    browser = await playwright.chromium.launch(headless=False, slow_mo=1000)
+    browser = await playwright.chromium.launch(headless=True, slow_mo=1000)
     context = await browser.new_context()
     
     # 尝试加载现有的 cookie
