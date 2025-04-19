@@ -20,8 +20,18 @@
         "sameSite": "Lax"
     },
     {
+        "name": "_ga",
+        "value": "GA1.2.295208330.1744816358",
+        "domain": ".xshellz.com",
+        "path": "/",
+        "expires": 1779583532.846876,
+        "httpOnly": false,
+        "secure": false,
+        "sameSite": "Lax"
+    },
+    {
         "name": "xshellz_session",
-        "value": "FglV7Eg4RrH6dUb5VkaqE8gWFHgu70aHmxMWYOYa",
+        "value": "HhTu4wY5pMelgFIcqQ5EkfUf0hXkDjC2QaGQedg6",
         "domain": "www.xshellz.com",
         "path": "/",
         "expires": -1,
@@ -30,21 +40,11 @@
         "sameSite": "Lax"
     },
     {
-        "name": "_ga",
-        "value": "GA1.2.295208330.1744816358",
-        "domain": ".xshellz.com",
-        "path": "/",
-        "expires": 1779451310.032507,
-        "httpOnly": false,
-        "secure": false,
-        "sameSite": "Lax"
-    },
-    {
         "name": "_gid",
-        "value": "GA1.2.154014067.1744816358",
+        "value": "GA1.2.716371609.1745023531",
         "domain": ".xshellz.com",
         "path": "/",
-        "expires": 1744977710,
+        "expires": 1745109932,
         "httpOnly": false,
         "secure": false,
         "sameSite": "Lax"
@@ -54,37 +54,37 @@
         "value": "1",
         "domain": ".xshellz.com",
         "path": "/",
-        "expires": 1744891367,
+        "expires": 1745023591,
         "httpOnly": false,
         "secure": false,
         "sameSite": "Lax"
     },
     {
         "name": "_ga_0MP03KZ0MW",
-        "value": "GS1.2.1744891307.3.1.1744891310.0.0.0",
+        "value": "GS1.2.1745023531.4.1.1745023532.0.0.0",
         "domain": ".xshellz.com",
         "path": "/",
-        "expires": 1779451310.098742,
+        "expires": 1779583532.905998,
         "httpOnly": false,
         "secure": false,
         "sameSite": "Lax"
     },
     {
         "name": "__cf_bm",
-        "value": "yYD6KcEDiqjBi3SNFgKZnc.6cler3crnvAMic3E2Sss-1744891310-1.0.1.1-gxkSRfCoRzP0rOlm4uDKKRIH22z.n1cYMI8WONlltC3BrQMm1iptfViRtGZX9SPMCmCqJ15dPwT1vyv0JM_tzisaYxea.cHq0rteQdxKg9o",
+        "value": "i0hkS3rYsrqgTvmpK4Avm64WN6Z7LMySbUPqHlXB60E-1745023532-1.0.1.1-YBIAk8bBpFYCXOfCRlj5CY5bALh8SOjfMGn4zwuDaj64WAZ.vFmc.TvlE66xaBmGAJFkLIZ3U_Rr20.bej_iwFk8u4Tpnd0hwrzUrl6OnOg",
         "domain": ".twitter.com",
         "path": "/",
-        "expires": 1744893110.132053,
+        "expires": 1745025333.000897,
         "httpOnly": true,
         "secure": true,
         "sameSite": "None"
     },
     {
         "name": "XSRF-TOKEN",
-        "value": "eyJpdiI6InNDUDgzenNrUU0yV0FzMjhkanBtdkE9PSIsInZhbHVlIjoiRHpKeXVhRXNrak9KaXZMSUN4NHppME1ySGdmTjVDRFBEc0dwMFNFcVN2and1bTNneHFFcnpndm1mVFdvVlVXbiIsIm1hYyI6ImVlNWM2ZTQwNDMwOTM4Zjg5ZmIxNTgxMGEwMThjMTMzNjFlYzRkZDI4NzAwNzQzZjM4Yzg2Y2U3MGM4NjkxYzQifQ%3D%3D",
+        "value": "eyJpdiI6ImFEWFVZMG9OOHRrV3dEWHE5aHpBMGc9PSIsInZhbHVlIjoiV2R5b3ZOUlpvQm81eVk1RnVGT3ppNVBUSHFSVExSa3ZxOVcwOXNKOThCS2Jsa25rTTRFM1p6eWZYRUdWdHVxMiIsIm1hYyI6IjFhNjJhZTk5YzQxYTgzNDZmOWFhYTI3ZDRjNWJjZTllYmM0ZDExYzcwZmNjNDEzYjQ0NzlhNTEyNDcwN2FiNzQifQ%3D%3D",
         "domain": "www.xshellz.com",
         "path": "/",
-        "expires": 1744977714.759302,
+        "expires": 1745109937.365001,
         "httpOnly": false,
         "secure": false,
         "sameSite": "Lax"
