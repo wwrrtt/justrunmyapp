@@ -1,11 +1,11 @@
 name: Auto Shell Keep Alive
 
-on:
+#on:
   schedule:
     - cron: '0 0 */2 * *'  # 每2天运行一次
   workflow_dispatch:  # 允许手动触发
 
-jobs:
+#jobs:
   keep-alive:
     runs-on: ubuntu-latest
     permissions:
