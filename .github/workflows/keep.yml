@@ -1,17 +1,17 @@
 name: Auto Shell Keep Alive
 
 #on:
-  schedule:
-    - cron: '0 0 */2 * *'  # 每2天运行一次
-  workflow_dispatch:  # 允许手动触发
+#  schedule:
+#    - cron: '0 0 */2 * *'  # 每2天运行一次
+#  workflow_dispatch:  # 允许手动触发
 
 #jobs:
-  keep-alive:
+#  keep-alive:
     runs-on: ubuntu-latest
     permissions:
       contents: write  # 添加写入权限
     
-    steps:
+#    steps:
     - name: Checkout repository
       uses: actions/checkout@v2
       with:
