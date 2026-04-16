@@ -9,10 +9,10 @@ from playwright.async_api import TimeoutError
 
 
 # ─── 环境变量读取 ───────────────────────────────────────────────
-LOGIN_EMAIL = os.environ.get("LOGIN_EMAIL", "lostrrtt@gmail.com")
-LOGIN_PASSWORD = os.environ.get("LOGIN_PASSWORD", "RRTTruanting520")
-TG_BOT_TOKEN = os.environ.get("TG_BOT_TOKEN", "5454493483:AAEaEfZ_OWMyFuB6Om_rfHJeZAmN8iBtFoU")
-TG_CHAT_ID = os.environ.get("TG_CHAT_ID", "1918407248")
+LOGIN_EMAIL = os.environ.get("LOGIN_EMAIL", "")
+LOGIN_PASSWORD = os.environ.get("LOGIN_PASSWORD", "")
+TG_BOT_TOKEN = os.environ.get("TG_BOT_TOKEN", "")
+TG_CHAT_ID = os.environ.get("TG_CHAT_ID", "")
 
 
 class StepLogger:
