@@ -2,13 +2,14 @@ name: Auto Keep Task
 
 on:
   schedule:
+    # 每两天 UTC 00:00 执行一次（北京时间 08:00）
     - cron: '0 0 */2 * *'
-  workflow_dispatch:
+  workflow_dispatch: # 允许在 Actions 页面手动触发测试
 
 jobs:
   run-script:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 30 # 防止任务因网络卡死无限运行
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
@@ -18,13 +19,6 @@ jobs:
         with:
           python-version: '3.11'
           cache: 'pip'
-
-      - name: 安装系统依赖（Firefox 必需）
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libgtk-3-0 libx11-xcb1 libxrandr2 libasound2 \
-            libdbus-glib-1-2 libxt6 xvfb
 
       - name: 安装依赖 & 浏览器
         run: |
@@ -40,15 +34,4 @@ jobs:
           LOGIN_PASSWORD: ${{ secrets.LOGIN_PASSWORD }}
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
-          PWDEBUG: 1  # ✅ 失败时输出详细日志
         run: python keep.py
-
-      - name: 上传调试日志（仅失败时）
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: debug-logs-${{ github.run_id }}
-          path: |
-            playwright-report/
-            *.log
-            camoufox/*.log
