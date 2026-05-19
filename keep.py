@@ -84,13 +84,14 @@ async def run():
     logger.log("🚀", "正在启动 Camoufox 浏览器...")
 
     async with AsyncCamoufox(headless=True) as browser:
-    page = await browser.new_page()
+        page = await browser.new_page()
     # ✅ 拦截页面未捕获异常，防止 Playwright 驱动崩溃
-    page.on("pageerror", lambda err: print(f"[页面异常已忽略] {err}"))
+        page.on("pageerror", lambda err: print(f"[页面异常已忽略] {err}"))
 
-    url = "https://justrunmy.app/id/account/login"
-    logger.log("🌐", f"正在打开页面: {url}")
-    await page.goto(url)
+        url = "https://justrunmy.app/id/account/login"
+        logger.log("🌐", f"正在打开页面: {url}")
+        await page.goto(url)
+    # ... 后续代码保持同一缩进级别
 
         # ─── 1. 输入账号密码 ───────────────────────────────────
         email_input = page.locator("#login")
