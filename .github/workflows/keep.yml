@@ -26,8 +26,8 @@ jobs:
           pip install -r requirements.txt
           # ✅ 顺序关键：先 playwright install，再 camoufox fetch
           pip install --upgrade camoufox playwright
-          python -m playwright install 
-          python -m camoufox fetch
+          python -m playwright install --with-deps firefox 
+          
 
       - name: 运行自动化脚本
         env:
