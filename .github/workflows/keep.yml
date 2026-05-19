@@ -1,11 +1,9 @@
 name: Auto Keep Task
-
 on:
   schedule:
     # 每两天 UTC 00:00 执行一次（北京时间 08:00）
     - cron: '0 0 */2 * *'
   workflow_dispatch: # 允许在 Actions 页面手动触发测试
-
 jobs:
   run-script:
     runs-on: ubuntu-latest
@@ -13,6 +11,14 @@ jobs:
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
+
+      - name: 锁定 Node.js 版本
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 确认 Node 版本
+        run: node --version
 
       - name: 设置 Python 环境
         uses: actions/setup-python@v5
@@ -22,11 +28,10 @@ jobs:
 
       - name: 安装依赖 & 浏览器
         run: |
-           pip install --upgrade pip
-           pip install --upgrade "camoufox[geoip]" httpx playwright
-           python -m playwright install-deps firefox
-           python -m camoufox fetch 
-          
+          pip install --upgrade pip
+          pip install --upgrade "camoufox[geoip]" httpx playwright
+		  python -m playwright install-deps firefox
+          python -m camoufox fetch
 
       - name: 运行自动化脚本
         env:
