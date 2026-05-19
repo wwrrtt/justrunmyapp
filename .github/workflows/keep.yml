@@ -22,11 +22,10 @@ jobs:
 
       - name: 安装依赖 & 浏览器
         run: |
-          pip install --upgrade pip
-          pip install -r requirements.txt
-          # ✅ 顺序关键：先 playwright install，再 camoufox fetch
-          pip install --upgrade camoufox playwright
-          python -m playwright install --with-deps firefox 
+           pip install --upgrade pip
+           pip install --upgrade "camoufox[geoip]" httpx playwright
+           python -m playwright install-deps firefox
+           python -m camoufox fetch 
           
 
       - name: 运行自动化脚本
