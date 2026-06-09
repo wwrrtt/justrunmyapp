@@ -1,0 +1,37 @@
+name: Auto Keep Task
+on:
+  schedule:
+    - cron: '0 0 */2 * *'
+  workflow_dispatch:
+jobs:
+  run-script:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python 环境
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 安装系统依赖（字体 & Playwright 系统库）
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            fonts-noto-color-emoji fonts-freefont-ttf fonts-unifont \
+            fonts-ipafont-gothic fonts-wqy-zenhei fonts-tlwg-loma-otf
+          pip install --upgrade pip
+          pip install cloakbrowser httpx
+          python -m cloakbrowser install
+          python -m playwright install-deps chromium
+
+      - name: 运行自动化脚本
+        env:
+          LOGIN_EMAIL: ${{ secrets.LOGIN_EMAIL }}
+          LOGIN_PASSWORD: ${{ secrets.LOGIN_PASSWORD }}
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+        run: python keep.py
