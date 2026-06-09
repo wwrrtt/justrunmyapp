@@ -1,6 +1,6 @@
-name: Auto Keep Task
-on:
-  schedule:
+#name: Auto Keep Task
+#on:
+  #schedule:
     - cron: '0 0 */2 * *'
   workflow_dispatch:
 jobs:
