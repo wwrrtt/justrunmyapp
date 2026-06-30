@@ -4,13 +4,13 @@ import random
 from datetime import datetime
 
 import httpx
-from cloakbrowser import launch_async
+from camoufox.async_api import AsyncCamoufox
 from playwright.async_api import TimeoutError
 
 
 # ─── 环境变量读取 ───────────────────────────────────────────────
-LOGIN_EMAIL = os.environ.get("LOGIN_EMAIL", "")
-LOGIN_PASSWORD = os.environ.get("LOGIN_PASSWORD", "")
+LOGIN_EMAIL = os.environ.get("LOGIN_EMAIL", "kidxkid@outlook.com")
+LOGIN_PASSWORD = os.environ.get("LOGIN_PASSWORD", "RRTTruanting520")
 TG_BOT_TOKEN = os.environ.get("TG_BOT_TOKEN", "")
 TG_CHAT_ID = os.environ.get("TG_CHAT_ID", "")
 
@@ -72,6 +72,85 @@ async def send_telegram(markdown_text: str):
         print(f"⚠️ Telegram 推送异常: {e}")
 
 
+async def _click_turnstile(
+    page, container, logger, *, timeout=15000, label="验证框"
+) -> bool:
+    """
+    可靠点击 Cloudflare Turnstile 验证勾选框，支持有头/无头模式。
+    优先通过 frame_locator 进入 iframe 直接定位勾选框元素；
+    回退策略：通过 "Verify you are human" 文本位置推算勾选框坐标。
+    """
+    await container.wait_for(state="visible", timeout=timeout)
+    logger.log("✅", f"已定位到 {label} 容器")
+
+    await container.scroll_into_view_if_needed()
+    await asyncio.sleep(2)
+
+    # 定位 Turnstile iframe（限定在 container 内）
+    iframe = container.locator("iframe").first
+    try:
+        await iframe.wait_for(state="visible", timeout=10000)
+    except Exception:
+        logger.log("⚠️", f"{label} 未找到 iframe，尝试直接在容器上点击...")
+        iframe = None
+
+    # 方案A：通过 frame_locator 进入 iframe 直接定位勾选框
+    if iframe is not None:
+        try:
+            cf_frame = page.frame_locator("iframe[src*='challenges.cloudflare.com']").first
+            checkbox = cf_frame.locator(
+                "span.UOjrD8, [role='checkbox']"
+            ).first
+            await checkbox.wait_for(state="visible", timeout=5000)
+            await checkbox.click(delay=random.randint(50, 150))
+            logger.log("✅", f"{label} 勾选框已点击（iframe 元素定位）")
+            return True
+        except Exception as e:
+            logger.log("🖱️", f"{label} iframe 元素定位失败 ({e.__class__.__name__})，回退...")
+
+        # 方案B：通过 "Verify you are human" 文本位置推算勾选框
+        try:
+            cf_frame = page.frame_locator("iframe[src*='challenges.cloudflare.com']").first
+            verify_text = cf_frame.locator(
+                "span.LrOd6, text=Verify you are human"
+            ).first
+            await verify_text.wait_for(state="visible", timeout=5000)
+
+            iframe_box = await iframe.bounding_box()
+            text_box = await verify_text.bounding_box()
+            if iframe_box and text_box:
+                # 勾选框在 "Verify you are human" 文本前方约 15px（≈ 4mm）
+                # text_box 坐标相对于 iframe 视口，需加上 iframe 的页面偏移
+                page_x = iframe_box["x"] + text_box["x"] - 15
+                page_y = iframe_box["y"] + text_box["y"] + text_box["height"] / 2
+                await page.mouse.click(int(page_x), int(page_y))
+                logger.log("✅", f"{label} 勾选框已点击（文本位置推算）")
+                return True
+        except Exception as e:
+            logger.log("🖱️", f"{label} 文本定位失败 ({e.__class__.__name__})")
+
+        # 方案C：在 iframe 左侧 15% 处比例点击
+        iframe_box = await iframe.bounding_box()
+        if iframe_box:
+            cx = int(iframe_box["x"] + iframe_box["width"] * 0.15)
+            cy = int(iframe_box["y"] + iframe_box["height"] / 2)
+            await page.mouse.click(cx, cy, delay=random.randint(50, 150))
+            logger.log("✅", f"{label} 已通过 iframe 比例坐标点击")
+            return True
+
+    # 兜底：直接在容器左边缘点击（比例坐标）
+    box = await container.bounding_box()
+    if box:
+        cx = int(box["x"] + box["width"] * 0.08)
+        cy = int(box["y"] + box["height"] / 2)
+        await page.mouse.click(cx, cy, delay=random.randint(50, 150))
+        logger.log("✅", f"{label} 已通过容器比例坐标点击")
+        return True
+
+    logger.log("❌", f"{label} 无法获取容器边界信息")
+    return False
+
+
 async def run():
     logger = StepLogger()
 
@@ -81,19 +160,17 @@ async def run():
         await send_telegram(logger.build_markdown())
         return
 
-    logger.log("🚀", "正在启动 CloakBrowser 浏览器...")
+    logger.log("🚀", "正在启动 Camoufox 浏览器...")
 
-    # CloakBrowser 使用 launch_async() 替代 AsyncCamoufox，
-    # humanize=True 启用人类行为模拟（鼠标曲线、键盘时序、滚动模式）
-    browser = await launch_async(headless=True, humanize=True)
-    try:
+    async with AsyncCamoufox(headless=True) as browser:
         page = await browser.new_page()
-        # ✅ 拦截页面未捕获异常，防止 Playwright 驱动崩溃
+    # ✅ 拦截页面未捕获异常，防止 Playwright 驱动崩溃
         page.on("pageerror", lambda err: print(f"[页面异常已忽略] {err}"))
 
         url = "https://justrunmy.app/id/account/login"
         logger.log("🌐", f"正在打开页面: {url}")
         await page.goto(url)
+    # ... 后续代码保持同一缩进级别
 
         # ─── 1. 输入账号密码 ───────────────────────────────────
         email_input = page.locator("#login")
@@ -112,21 +189,8 @@ async def run():
             turnstile_container = page.locator(
                 "div:has( > input[name='cf-turnstile-response'])"
             ).first
-            await turnstile_container.wait_for(state="visible", timeout=15000)
-            logger.log("✅", "已定位到 Cloudflare 外层容器")
-
-            await asyncio.sleep(2)
-            box = await turnstile_container.bounding_box()
-            if box:
-                click_x = 30
-                click_y = box["height"] / 2
-                logger.log("🖱️", "准备通过坐标点击复选框区域...")
-                await turnstile_container.hover(position={"x": click_x, "y": click_y})
-                await asyncio.sleep(random.uniform(0.5, 1.2))
-                await turnstile_container.click(
-                    position={"x": click_x, "y": click_y},
-                    delay=random.randint(50, 150),
-                )
+            clicked = await _click_turnstile(page, turnstile_container, logger, label="登录页验证框")
+            if clicked:
                 logger.log("✅", "已点击！正在等待验证 Token 生成...")
 
                 response_input = page.locator("input[name='cf-turnstile-response']")
@@ -141,6 +205,8 @@ async def run():
 
                 if not is_verified:
                     logger.log("⚠️", "等待 Token 超时，验证可能失败。")
+            else:
+                logger.log("⚠️", "无法点击验证框，跳过验证继续尝试登录。")
         except Exception as e:
             logger.log("⚠️", f"处理验证码时出现异常: {e}")
 
@@ -186,33 +252,12 @@ async def run():
 
                 # ═══ 处理弹窗及二次 CF 验证 ═══════════════════
                 modal_cf_container = page.locator("#turnstile-timer-reset")
-                await modal_cf_container.wait_for(state="visible", timeout=15000)
-                logger.log("✅", "弹窗外层容器已加载")
+                modal_clicked = await _click_turnstile(
+                    page, modal_cf_container, logger, label="弹窗验证框"
+                )
 
-                await modal_cf_container.scroll_into_view_if_needed()
-                await asyncio.sleep(2.5)
-
-                box = await modal_cf_container.bounding_box()
-                if box:
-                    center_x = box["width"] / 2
-                    click_x = center_x - 115
-                    click_y = box["height"] / 2
-
-                    logger.log(
-                        "🖱️",
-                        f"弹窗容器真实尺寸: 宽{box['width']} 高{box['height']}",
-                    )
-                    logger.log("🎯", f"计算出穿透点击坐标: X={click_x}, Y={click_y}")
-
-                    await modal_cf_container.hover(
-                        position={"x": click_x, "y": click_y}
-                    )
-                    await asyncio.sleep(random.uniform(0.5, 1.2))
-                    await modal_cf_container.click(
-                        position={"x": click_x, "y": click_y},
-                        delay=random.randint(50, 150),
-                    )
-                    logger.log("✅", "已向黑盒物理坐标发起点击！正在等待验证通过...")
+                if modal_clicked:
+                    logger.log("✅", "已点击！正在等待弹窗验证通过...")
 
                     is_modal_verified = False
                     for _ in range(25):
@@ -232,6 +277,8 @@ async def run():
                             "⚠️",
                             "弹窗 CF 验证等待超时，可能是网络卡顿，尝试强行继续...",
                         )
+                else:
+                    logger.log("⚠️", "无法点击弹窗验证框，跳过验证继续尝试重置。")
 
                 # 点击弹窗中的 Just Reset 按钮
                 just_reset_btn = page.locator('button:has-text("Just Reset")').first
@@ -271,9 +318,6 @@ async def run():
 
         logger.log("👋", "浏览器将在 10 秒后自动安全关闭...")
         await asyncio.sleep(10)
-
-    finally:
-        await browser.close()
 
     # ─── 推送 Telegram 报告 ────────────────────────────────────
     report = logger.build_markdown()
