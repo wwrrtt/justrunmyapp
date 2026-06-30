@@ -9,8 +9,8 @@ from playwright.async_api import TimeoutError
 
 
 # ─── 环境变量读取 ───────────────────────────────────────────────
-LOGIN_EMAIL = os.environ.get("LOGIN_EMAIL", "kidxkid@outlook.com")
-LOGIN_PASSWORD = os.environ.get("LOGIN_PASSWORD", "RRTTruanting520")
+LOGIN_EMAIL = os.environ.get("LOGIN_EMAIL", "")
+LOGIN_PASSWORD = os.environ.get("LOGIN_PASSWORD", "")
 TG_BOT_TOKEN = os.environ.get("TG_BOT_TOKEN", "")
 TG_CHAT_ID = os.environ.get("TG_CHAT_ID", "")
 
@@ -78,7 +78,8 @@ async def _click_turnstile(
     """
     可靠点击 Cloudflare Turnstile 验证勾选框，支持有头/无头模式。
     优先通过 frame_locator 进入 iframe 直接定位勾选框元素；
-    回退策略：通过 "Verify you are human" 文本位置推算勾选框坐标。
+    无 iframe 时（shadow DOM 模式），先找容器内有尺寸的子元素
+    shadow host），再在其左侧 15% 处点击勾选框。
     """
     await container.wait_for(state="visible", timeout=timeout)
     logger.log("✅", f"已定位到 {label} 容器")
@@ -86,18 +87,27 @@ async def _click_turnstile(
     await container.scroll_into_view_if_needed()
     await asyncio.sleep(2)
 
-    # 定位 Turnstile iframe（限定在 container 内）
-    iframe = container.locator("iframe").first
-    try:
-        await iframe.wait_for(state="visible", timeout=10000)
-    except Exception:
-        logger.log("⚠️", f"{label} 未找到 iframe，尝试直接在容器上点击...")
-        iframe = None
-
-    # 方案A：通过 frame_locator 进入 iframe 直接定位勾选框
-    if iframe is not None:
+    # 第一步：找 Turnstile iframe
+    iframe = None
+    for finder_desc, finder in [
+        ("容器内", container.locator("iframe").first),
+        ("页面级", page.locator("iframe[src*='challenges.cloudflare.com']").first),
+    ]:
         try:
-            cf_frame = page.frame_locator("iframe[src*='challenges.cloudflare.com']").first
+            await finder.wait_for(state="visible", timeout=5000)
+            iframe = finder
+            logger.log("🔍", f"{label} iframe 已找到（{finder_desc}）")
+            break
+        except Exception:
+            pass
+
+    # 第二步：有 iframe → 进去点勾选框
+    if iframe is not None:
+        # 方案A：frame_locator 定位勾选框元素
+        try:
+            cf_frame = page.frame_locator(
+                "iframe[src*='challenges.cloudflare.com']"
+            ).first
             checkbox = cf_frame.locator(
                 "span.UOjrD8, [role='checkbox']"
             ).first
@@ -106,30 +116,31 @@ async def _click_turnstile(
             logger.log("✅", f"{label} 勾选框已点击（iframe 元素定位）")
             return True
         except Exception as e:
-            logger.log("🖱️", f"{label} iframe 元素定位失败 ({e.__class__.__name__})，回退...")
+            logger.log(
+                "🖱️", f"{label} iframe 元素定位失败 ({e.__class__.__name__})，回退..."
+            )
 
-        # 方案B：通过 "Verify you are human" 文本位置推算勾选框
+        # 方案B：通过 "Verify you are human" 文本推算
         try:
-            cf_frame = page.frame_locator("iframe[src*='challenges.cloudflare.com']").first
+            cf_frame = page.frame_locator(
+                "iframe[src*='challenges.cloudflare.com']"
+            ).first
             verify_text = cf_frame.locator(
                 "span.LrOd6, text=Verify you are human"
             ).first
             await verify_text.wait_for(state="visible", timeout=5000)
-
             iframe_box = await iframe.bounding_box()
             text_box = await verify_text.bounding_box()
             if iframe_box and text_box:
-                # 勾选框在 "Verify you are human" 文本前方约 15px（≈ 4mm）
-                # text_box 坐标相对于 iframe 视口，需加上 iframe 的页面偏移
                 page_x = iframe_box["x"] + text_box["x"] - 15
                 page_y = iframe_box["y"] + text_box["y"] + text_box["height"] / 2
                 await page.mouse.click(int(page_x), int(page_y))
-                logger.log("✅", f"{label} 勾选框已点击（文本位置推算）")
+                logger.log("✅", f"{label} 勾选框已点击（文本推算）")
                 return True
         except Exception as e:
-            logger.log("🖱️", f"{label} 文本定位失败 ({e.__class__.__name__})")
+            logger.log("🖱️", f"{label} 文本推算失败 ({e.__class__.__name__})")
 
-        # 方案C：在 iframe 左侧 15% 处比例点击
+        # 方案C：iframe 左侧 15% 比例点击
         iframe_box = await iframe.bounding_box()
         if iframe_box:
             cx = int(iframe_box["x"] + iframe_box["width"] * 0.15)
@@ -138,18 +149,48 @@ async def _click_turnstile(
             logger.log("✅", f"{label} 已通过 iframe 比例坐标点击")
             return True
 
-    # 兜底：直接在容器左边缘点击（比例坐标）
-    box = await container.bounding_box()
-    if box:
-        cx = int(box["x"] + box["width"] * 0.08)
+    # 第三步：无 iframe（shadow DOM 模式）→ 找 shadow host 元素
+    # 容器内有尺寸的可见子元素极大概率就是 Turnstile 的 shadow host
+    shadow_host = None
+    try:
+        children = await container.locator("> *").all()
+        for child in children:
+            box = await child.bounding_box()
+            if box and box["height"] > 30 and box["width"] > 80:
+                shadow_host = child
+                logger.log("🔍", f"{label} 找到 shadow host: {box['width']:.0f}x{box['height']:.0f}")
+                break
+    except Exception:
+        pass
+
+    target = shadow_host if shadow_host is not None else container
+    box = await target.bounding_box()
+    if not box:
+        logger.log("❌", f"{label} 无法获取目标元素边界")
+        return False
+
+    # 勾选框在 shadow host 左侧约 15% 处
+    logger.log("🖱️", f"{label} 目标尺寸: {box['width']:.0f}x{box['height']:.0f}")
+    # 试两个位置：15%（勾选框常规位置）和  50%（中点，兜底）
+    for pct_name, pct in [("常规", 0.15), ("中点", 0.50)]:
+        cx = int(box["x"] + box["width"] * pct)
         cy = int(box["y"] + box["height"] / 2)
         await page.mouse.click(cx, cy, delay=random.randint(50, 150))
-        logger.log("✅", f"{label} 已通过容器比例坐标点击")
-        return True
+        logger.log("🖱️", f"{label} 已点击 ({pct_name}: {pct*100:.0f}% 位置)")
 
-    logger.log("❌", f"{label} 无法获取容器边界信息")
-    return False
+        await asyncio.sleep(1.5)
+        try:
+            val = await page.locator(
+                "input[name='cf-turnstile-response']"
+            ).first.input_value(timeout=500)
+            if val:
+                logger.log("✅", f"{label} 勾选框点击成功! Token 已生成。")
+                return True
+        except Exception:
+            pass
 
+    logger.log("✅", f"{label} 点击完成，等待 Token 生成...")
+    return True
 
 async def run():
     logger = StepLogger()
@@ -214,7 +255,7 @@ async def run():
         submit_btn = page.locator("button[type='submit']")
         await submit_btn.wait_for(state="visible")
         await asyncio.sleep(random.uniform(1.0, 2.0))
-        await submit_btn.click()
+        await submit_btn.click(no_wait_after=True)
         logger.log("✅", "已点击登录按钮")
 
         # ─── 4. 检查结果 & 执行后续流程 ───────────────────────
