@@ -13,6 +13,7 @@ LOGIN_EMAIL = os.environ.get("LOGIN_EMAIL", "")
 LOGIN_PASSWORD = os.environ.get("LOGIN_PASSWORD", "")
 TG_BOT_TOKEN = os.environ.get("TG_BOT_TOKEN", "")
 TG_CHAT_ID = os.environ.get("TG_CHAT_ID", "")
+SOCKS5_PROXY = os.environ.get("SOCKS5_PROXY", "")
 
 
 class StepLogger:
@@ -203,7 +204,12 @@ async def run():
 
     logger.log("🚀", "正在启动 Camoufox 浏览器...")
 
-    async with AsyncCamoufox(headless=True) as browser:
+    browser_args = {"headless": True}
+    if SOCKS5_PROXY:
+        browser_args["proxy"] = SOCKS5_PROXY
+        logger.log("🔌", f"已配置 SOCKS5 代理: {SOCKS5_PROXY}")
+
+    async with AsyncCamoufox(**browser_args) as browser:
         page = await browser.new_page()
     # ✅ 拦截页面未捕获异常，防止 Playwright 驱动崩溃
         page.on("pageerror", lambda err: print(f"[页面异常已忽略] {err}"))
