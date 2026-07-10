@@ -26,10 +26,70 @@ jobs:
           pip install --upgrade pip
           pip install "camoufox[geoip]" "playwright==1.49.0" httpx
           python -m camoufox fetch
+      - name: 下载并安装 Xray
+        run: |
+          wget https://github.com/XTLS/Xray-core/releases/latest/download/Xray-linux-64.zip
+          unzip Xray-linux-64.zip
+          chmod +x xray
+          sudo mv xray /usr/local/bin/
+          sudo mkdir -p /etc/xray
+          echo "✅ Xray installed successfully"
+      - name: 写入 Xray 配置
+        env:
+          XRAY_CONFIG_BASE64: ${{ secrets.XRAY_CONFIG_BASE64 }}
+        run: |
+          echo "$XRAY_CONFIG_BASE64" | base64 -d | sudo tee /etc/xray/config.json > /dev/null
+          echo "✅ Xray config created ($(wc -c < /etc/xray/config.json) bytes)"
+      - name: 启动 Xray 并等待代理就绪
+        run: |
+          nohup xray run -c /etc/xray/config.json > /tmp/xray.log 2>&1 &
+          XRAY_PID=$!
+          echo "XRAY_PID=$XRAY_PID" >> $GITHUB_ENV
+          echo "Xray started with PID: $XRAY_PID"
+
+          sleep 3
+          if ps -p $XRAY_PID > /dev/null; then
+            echo "✅ Xray is running"
+          else
+            echo "❌ Xray failed to start"
+            cat /tmp/xray.log
+            exit 1
+          fi
+
+          for i in $(seq 1 10); do
+            if netstat -tuln 2>/dev/null | grep -q ':9090' || ss -tln 2>/dev/null | grep -q ':9090'; then
+              echo "✅ SOCKS5 proxy listening on port 9090 (attempt $i)"
+              break
+            fi
+            sleep 1
+          done
+
+          # 验证代理连通性
+          if curl -x socks5://127.0.0.1:9090 -s -o /dev/null -w "%{http_code}" http://www.gstatic.com/generate_204 2>/dev/null | grep -q 204; then
+            echo "✅ Proxy connectivity confirmed"
+          else
+            echo "⚠️ Proxy test inconclusive, continuing anyway"
+          fi
       - name: 运行自动化脚本
         env:
           LOGIN_EMAIL: ${{ secrets.LOGIN_EMAIL }}
           LOGIN_PASSWORD: ${{ secrets.LOGIN_PASSWORD }}
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
-        run: python main.py
+          SOCKS5_PROXY: socks5://127.0.0.1:9090
+        run: |
+          export http_proxy=socks5://127.0.0.1:9090
+          export https_proxy=socks5://127.0.0.1:9090
+          python main.py
+      - name: 停止 Xray 服务
+        if: always()
+        run: |
+          if [ ! -z "$XRAY_PID" ]; then
+            echo "Stopping Xray (PID: $XRAY_PID)"
+            kill $XRAY_PID 2>/dev/null
+            sleep 2
+            if ps -p $XRAY_PID > /dev/null 2>&1; then
+              kill -9 $XRAY_PID 2>/dev/null
+            fi
+            echo "✅ Xray stopped"
+          fi
