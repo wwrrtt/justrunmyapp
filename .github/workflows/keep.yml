@@ -25,7 +25,6 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install "cloakbrowser" "httpx[socks]"
-          python -m camoufox fetch
       - name: 下载并安装 Xray
         run: |
           wget https://github.com/XTLS/Xray-core/releases/latest/download/Xray-linux-64.zip
