@@ -24,7 +24,7 @@ jobs:
       - name: 安装依赖 & 浏览器
         run: |
           pip install --upgrade pip
-          pip install "camoufox[geoip]" "playwright==1.49.0" "httpx[socks]"
+          pip install "cloakbrowser" "httpx[socks]"
           python -m camoufox fetch
       - name: 下载并安装 Xray
         run: |
