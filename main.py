@@ -4,7 +4,7 @@ import random
 from datetime import datetime
 
 import httpx
-from camoufox.async_api import AsyncCamoufox
+from cloakbrowser import launch_async
 from playwright.async_api import TimeoutError
 
 
@@ -202,22 +202,22 @@ async def run():
         await send_telegram(logger.build_markdown())
         return
 
-    logger.log("🚀", "正在启动 Camoufox 浏览器...")
+    logger.log("🚀", "正在启动 CloakBrowser 浏览器...")
 
     browser_args = {"headless": True}
     if SOCKS5_PROXY:
         browser_args["proxy"] = {"server": SOCKS5_PROXY}
         logger.log("🔌", f"已配置 SOCKS5 代理: {SOCKS5_PROXY}")
 
-    async with AsyncCamoufox(**browser_args) as browser:
+    browser = await launch_async(**browser_args)
+    try:
         page = await browser.new_page()
-    # ✅ 拦截页面未捕获异常，防止 Playwright 驱动崩溃
+        # ✅ 拦截页面未捕获异常，防止 Playwright 驱动崩溃
         page.on("pageerror", lambda err: print(f"[页面异常已忽略] {err}"))
 
         url = "https://justrunmy.app/id/account/login"
         logger.log("🌐", f"正在打开页面: {url}")
         await page.goto(url)
-    # ... 后续代码保持同一缩进级别
 
         # ─── 1. 输入账号密码 ───────────────────────────────────
         email_input = page.locator("#login")
@@ -365,6 +365,9 @@ async def run():
 
         logger.log("👋", "浏览器将在 10 秒后自动安全关闭...")
         await asyncio.sleep(10)
+
+    finally:
+        await browser.close()
 
     # ─── 推送 Telegram 报告 ────────────────────────────────────
     report = logger.build_markdown()
