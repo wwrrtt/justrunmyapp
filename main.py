@@ -204,7 +204,7 @@ async def run():
 
     logger.log("🚀", "正在启动 CloakBrowser 浏览器...")
 
-    browser_args = {"headless": True}
+    browser_args = {"headless": False}
     if SOCKS5_PROXY:
         browser_args["proxy"] = {"server": SOCKS5_PROXY}
         logger.log("🔌", f"已配置 SOCKS5 代理: {SOCKS5_PROXY}")
@@ -287,12 +287,12 @@ async def run():
                 await page.wait_for_load_state("domcontentloaded")
 
                 # 步骤 C：获取重置前倒计时 & 点击外部 Reset Timer 按钮
-                countdown_span = page.locator("span.font-mono.text-xl").first
+                countdown_span = page.locator("span.font-mono").first
                 await countdown_span.wait_for(state="visible", timeout=10000)
                 time_before = await countdown_span.inner_text()
                 logger.log("📊", f"点击 Reset Timer 前的倒计时: {time_before}")
 
-                reset_btn = page.locator('button:has-text("Reset Timer")').first
+                reset_btn = page.locator('button[aria-label="Reset timer"]').first
                 await reset_btn.wait_for(state="visible", timeout=10000)
                 await reset_btn.click()
                 logger.log("🔄", "已点击外层 Reset Timer 按钮，等待弹窗加载...")
