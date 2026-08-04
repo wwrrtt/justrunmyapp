@@ -204,7 +204,7 @@ async def run():
 
     logger.log("🚀", "正在启动 CloakBrowser 浏览器...")
 
-    browser_args = {"headless": False}
+    browser_args = {"headless": True}
     if SOCKS5_PROXY:
         browser_args["proxy"] = {"server": SOCKS5_PROXY}
         logger.log("🔌", f"已配置 SOCKS5 代理: {SOCKS5_PROXY}")
