@@ -1,2 +1,3 @@
 cloakbrowser
 httpx
+httpx[socks]
